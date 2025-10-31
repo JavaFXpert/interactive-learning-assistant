@@ -1,4 +1,4 @@
-name = "interactive-learning-assistant-proxy"
+name = "interactive-learning-assistant"
 main = "worker.js"
 compatibility_date = "2025-10-31"
 
