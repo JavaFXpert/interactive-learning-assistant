@@ -294,75 +294,29 @@
             font-style: italic;
         }
 
-        .video-card {
+        .video-container {
             margin: 1rem 0;
             border-radius: 0.75rem;
             overflow: hidden;
-            cursor: pointer;
-            transition: all 0.3s;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
+            max-width: 560px;
             position: relative;
         }
 
-        .video-card:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .video-thumbnail {
+        .video-wrapper {
             position: relative;
             width: 100%;
-            padding-bottom: 56.25%;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
             background: #000;
         }
 
-        .video-thumbnail img {
+        .video-wrapper iframe {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
-        }
-
-        .play-button {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 68px;
-            height: 48px;
-            background: rgba(255, 0, 0, 0.9);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .video-card:hover .play-button {
-            background: rgba(255, 0, 0, 1);
-            transform: translate(-50%, -50%) scale(1.1);
-        }
-
-        .play-button::after {
-            content: '';
-            width: 0;
-            height: 0;
-            border-left: 20px solid white;
-            border-top: 12px solid transparent;
-            border-bottom: 12px solid transparent;
-            margin-left: 4px;
-        }
-
-        .video-caption {
-            background: #fcd34d;
-            color: #78350f;
-            padding: 0.75rem;
-            text-align: center;
-            font-weight: 600;
-            font-size: 0.875rem;
+            border: none;
         }
 
         .input-container {
@@ -498,10 +452,9 @@
     <script>
         // IMPORTANT: Replace this with your Cloudflare Worker URL after deployment
         // See CLOUDFLARE_DEPLOYMENT.md for instructions
-        // MUST include https:// prefix!
-        // Example: 'https://anthropic-proxy.YOUR-NAME.workers.dev'
-        const API_ENDPOINT = 'YOUR_CLOUDFLARE_WORKER_URL_HERE';
-        const MODEL = 'claude-3-5-haiku-20241022'; // Claude 3.5 Haiku - fast and cost-effective
+        // Example: 'https://interactive-learning-assistant-proxy.YOUR-SUBDOMAIN.workers.dev'
+        const API_ENDPOINT = 'https://interactive-learning-assistant.james-e27.workers.dev';
+        const MODEL = 'claude-haiku-4-5';
         const MAX_TOKENS = 2000;
 
         // Validate API endpoint configuration
@@ -524,8 +477,10 @@ IMPORTANT RULES:
    [OPTION: Second answer]
    [OPTION: Third answer]
    [OPTION: Fourth answer]
-5. When the learner answers incorrectly, provide brief feedback and include a YouTube video link:
-   [VIDEO: https://www.youtube.com/watch?v=VIDEO_ID]
+5. When the learner answers incorrectly, provide brief feedback and include a YouTube video link in this format:
+   [VIDEO: full-youtube-url-here]
+   IMPORTANT: Replace "full-youtube-url-here" with an actual, specific YouTube URL
+   Example: [VIDEO: https://www.youtube.com/watch?v=dQw4w9WgXcQ]
    Choose short educational videos (under 10 minutes) from reputable channels like Khan Academy, Crash Course, TED-Ed
 6. When the learner answers correctly, give brief positive reinforcement and continue
 7. Adapt to the learner's level of understanding
@@ -698,7 +653,7 @@ Remember: Brief explanations, one question at a time, and use the special format
 
             // Check for video: [VIDEO: url]
             const videoMatch = content.match(/\[VIDEO:\s*([^\]]+)\]/);
-            if (videoMatch && role === 'assistant') {
+            if (videoMatch) {
                 const videoUrl = videoMatch[1].trim();
                 const textBefore = content.substring(0, videoMatch.index);
 
@@ -708,7 +663,43 @@ Remember: Brief explanations, one question at a time, and use the special format
                     container.appendChild(textEl);
                 }
 
-                container.appendChild(createVideoCard(videoUrl));
+                container.appendChild(createVideoEmbed(videoUrl));
+                return container;
+            }
+
+            // Check for plain YouTube URLs and convert them to embedded players
+            const youtubeUrlPattern = /(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+))/g;
+            const youtubeMatches = [...content.matchAll(youtubeUrlPattern)];
+
+            if (youtubeMatches.length > 0) {
+                let lastIndex = 0;
+
+                youtubeMatches.forEach((match) => {
+                    const fullUrl = match[0];
+                    const matchIndex = match.index;
+
+                    // Add text before the URL
+                    const textBefore = content.substring(lastIndex, matchIndex);
+                    if (textBefore.trim()) {
+                        const textEl = document.createElement('p');
+                        textEl.innerHTML = textBefore.trim().replace(/\n/g, '<br>');
+                        container.appendChild(textEl);
+                    }
+
+                    // Add embedded video
+                    container.appendChild(createVideoEmbed(fullUrl));
+
+                    lastIndex = matchIndex + fullUrl.length;
+                });
+
+                // Add any remaining text after the last URL
+                const textAfter = content.substring(lastIndex);
+                if (textAfter.trim()) {
+                    const textEl = document.createElement('p');
+                    textEl.innerHTML = textAfter.trim().replace(/\n/g, '<br>');
+                    container.appendChild(textEl);
+                }
+
                 return container;
             }
 
@@ -788,43 +779,34 @@ Remember: Brief explanations, one question at a time, and use the special format
             return optionsContainer;
         }
 
-        function createVideoCard(url) {
+        function createVideoEmbed(url) {
             const videoId = extractVideoId(url);
-            if (!videoId) {
+            // Check if video ID is invalid or is the template placeholder
+            if (!videoId || videoId === 'VIDEO_ID' || videoId.includes('full-youtube-url')) {
                 const link = document.createElement('a');
                 link.href = url;
                 link.target = '_blank';
-                link.textContent = 'Watch video';
+                link.textContent = 'Watch video (link may be invalid)';
+                link.style.color = '#dc2626';
                 return link;
             }
 
-            const card = document.createElement('div');
-            card.className = 'video-card';
-            card.addEventListener('click', () => {
-                window.open(url, '_blank');
-            });
+            const container = document.createElement('div');
+            container.className = 'video-container';
 
-            const thumbnail = document.createElement('div');
-            thumbnail.className = 'video-thumbnail';
+            const wrapper = document.createElement('div');
+            wrapper.className = 'video-wrapper';
 
-            const img = document.createElement('img');
-            img.src = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-            img.alt = 'Video thumbnail';
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://www.youtube.com/embed/${videoId}`;
+            iframe.title = 'YouTube video player';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
 
-            const playButton = document.createElement('div');
-            playButton.className = 'play-button';
+            wrapper.appendChild(iframe);
+            container.appendChild(wrapper);
 
-            thumbnail.appendChild(img);
-            thumbnail.appendChild(playButton);
-
-            const caption = document.createElement('div');
-            caption.className = 'video-caption';
-            caption.textContent = 'Click to watch on YouTube ↗';
-
-            card.appendChild(thumbnail);
-            card.appendChild(caption);
-
-            return card;
+            return container;
         }
 
         function extractVideoId(url) {
