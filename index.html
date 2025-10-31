@@ -585,12 +585,12 @@ Remember: Brief explanations, one question at a time, and use the special format
             const loadingEl = addLoadingIndicator();
 
             try {
-                // Make API call
+                // Make API call to the Cloudflare Worker proxy
+                // Note: The worker adds the anthropic-version header and API key
                 const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'anthropic-version': '2023-06-01'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         model: MODEL,
