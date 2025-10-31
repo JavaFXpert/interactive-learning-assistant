@@ -646,7 +646,9 @@ Remember: Brief explanations, one question at a time, and use the special format
             const videoMatch = content.match(/\[VIDEO:\s*([^\]]+)\]/);
             if (videoMatch) {
                 const videoUrl = videoMatch[1].trim();
+                const videoEndIndex = videoMatch.index + videoMatch[0].length;
                 const textBefore = content.substring(0, videoMatch.index);
+                const textAfter = content.substring(videoEndIndex);
 
                 if (textBefore.trim()) {
                     const textEl = document.createElement('p');
@@ -655,6 +657,13 @@ Remember: Brief explanations, one question at a time, and use the special format
                 }
 
                 container.appendChild(createVideoEmbed(videoUrl));
+
+                if (textAfter.trim()) {
+                    const textEl = document.createElement('p');
+                    textEl.innerHTML = textAfter.trim().replace(/\n/g, '<br>');
+                    container.appendChild(textEl);
+                }
+
                 return container;
             }
 
