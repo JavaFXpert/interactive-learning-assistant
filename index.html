@@ -496,7 +496,10 @@
     </div>
 
     <script>
-        const API_ENDPOINT = 'https://api.anthropic.com/v1/messages';
+        // IMPORTANT: Replace this with your Cloudflare Worker URL after deployment
+        // See CLOUDFLARE_DEPLOYMENT.md for instructions
+        // Example: 'https://interactive-learning-assistant-proxy.YOUR-SUBDOMAIN.workers.dev'
+        const API_ENDPOINT = 'YOUR_CLOUDFLARE_WORKER_URL_HERE';
         const MODEL = 'claude-haiku-4-5-20250514';
         const MAX_TOKENS = 2000;
 
