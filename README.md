@@ -1,6 +1,6 @@
 # Interactive Learning Assistant
 
-An interactive teaching companion powered by Claude Haiku 4.5 that guides learners through any subject using brief explanations and guided questions.
+An interactive teaching companion powered by Claude 3.5 Haiku that guides learners through any subject using brief explanations and guided questions.
 
 ## Features
 
@@ -36,7 +36,7 @@ This application requires a backend proxy to work because browsers cannot make d
 
 - **Frontend**: Vanilla HTML, CSS, and JavaScript
 - **Backend Proxy**: Cloudflare Workers (serverless)
-- **AI Model**: Claude Haiku 4.5 via Anthropic API
+- **AI Model**: Claude 3.5 Haiku via Anthropic API
 
 ## Project Structure
 
