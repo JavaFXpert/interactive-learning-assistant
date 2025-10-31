@@ -1,3 +1,7 @@
+name = "interactive-learning-assistant-proxy"
+main = "worker.js"
+compatibility_date = "2025-10-31"
+
 [observability]
 enabled = false
 head_sampling_rate = 1
