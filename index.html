@@ -477,10 +477,17 @@ IMPORTANT RULES:
    [OPTION: Second answer]
    [OPTION: Third answer]
    [OPTION: Fourth answer]
-5. When the learner answers incorrectly, provide brief feedback and include a YouTube video link in this format:
-   [VIDEO: full-youtube-url-here]
-   IMPORTANT: Replace "full-youtube-url-here" with an actual, specific YouTube URL
+5. When the learner answers incorrectly, provide brief feedback and include a YouTube video link in this EXACT format:
+   [VIDEO: https://www.youtube.com/watch?v=VIDEO_ID_HERE]
+
+   CRITICAL REQUIREMENTS:
+   - You MUST use a complete, valid YouTube URL starting with https://www.youtube.com/watch?v= or https://youtu.be/
+   - The video ID must be exactly 11 characters
+   - NEVER use placeholder text like "full-youtube-url-here" or "VIDEO_ID"
+   - ONLY suggest videos you know exist
+
    Example: [VIDEO: https://www.youtube.com/watch?v=dQw4w9WgXcQ]
+
    Choose short educational videos (under 10 minutes) from reputable channels like Khan Academy, Crash Course, TED-Ed
 6. When the learner answers correctly, give brief positive reinforcement and continue
 7. Adapt to the learner's level of understanding
@@ -651,72 +658,116 @@ Remember: Brief explanations, one question at a time, and use the special format
                 return container;
             }
 
-            // Check for video: [VIDEO: url]
-            const videoMatch = content.match(/\[VIDEO:\s*([^\]]+)\]/);
-            if (videoMatch) {
-                const videoUrl = videoMatch[1].trim();
-                const videoEndIndex = videoMatch.index + videoMatch[0].length;
-                const textBefore = content.substring(0, videoMatch.index);
-                const textAfter = content.substring(videoEndIndex);
+            // NEW: Deterministic video detection system
+            // Process content and extract all video references
+            const processedContent = parseAndRenderVideos(content);
 
+            // Add the processed content to container
+            processedContent.forEach(element => container.appendChild(element));
+
+            return container;
+        }
+
+        /**
+         * Deterministic video detection and rendering
+         * Processes content in order, handling both [VIDEO: url] tags and plain YouTube URLs
+         */
+        function parseAndRenderVideos(content) {
+            const elements = [];
+
+            // Step 1: Define strict YouTube URL pattern
+            // Matches: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID
+            const YOUTUBE_URL_REGEX = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&][^\s\]]*)?/;
+
+            // Step 2: Define [VIDEO: url] tag pattern - must contain a valid YouTube URL
+            const VIDEO_TAG_REGEX = /\[VIDEO:\s*([^\]]+?)\]/g;
+
+            // Step 3: Find all [VIDEO: ...] tags first (these have priority)
+            const videoTags = [];
+            let match;
+            while ((match = VIDEO_TAG_REGEX.exec(content)) !== null) {
+                const tagStart = match.index;
+                const tagEnd = match.index + match[0].length;
+                const urlCandidate = match[1].trim();
+
+                // Validate that the content inside [VIDEO: ...] is a valid YouTube URL
+                const urlMatch = urlCandidate.match(YOUTUBE_URL_REGEX);
+
+                if (urlMatch && urlMatch[1]) {
+                    videoTags.push({
+                        start: tagStart,
+                        end: tagEnd,
+                        videoId: urlMatch[1],
+                        fullMatch: match[0],
+                        url: urlCandidate
+                    });
+                    console.log(`[VIDEO DETECTION] Found tagged video: ${urlCandidate} -> ID: ${urlMatch[1]}`);
+                } else {
+                    console.warn(`[VIDEO DETECTION] Invalid URL in [VIDEO: ...] tag: "${urlCandidate}"`);
+                }
+            }
+
+            // Step 4: Find all plain YouTube URLs (not in [VIDEO: ...] tags)
+            const plainVideos = [];
+            const PLAIN_YOUTUBE_REGEX = new RegExp(YOUTUBE_URL_REGEX.source, 'g');
+
+            while ((match = PLAIN_YOUTUBE_REGEX.exec(content)) !== null) {
+                const urlStart = match.index;
+                const urlEnd = match.index + match[0].length;
+                const videoId = match[1];
+
+                // Check if this URL is inside a [VIDEO: ...] tag
+                const insideTag = videoTags.some(tag => urlStart >= tag.start && urlEnd <= tag.end);
+
+                if (!insideTag) {
+                    plainVideos.push({
+                        start: urlStart,
+                        end: urlEnd,
+                        videoId: videoId,
+                        url: match[0]
+                    });
+                    console.log(`[VIDEO DETECTION] Found plain video URL: ${match[0]} -> ID: ${videoId}`);
+                }
+            }
+
+            // Step 5: Combine and sort all video locations
+            const allVideos = [...videoTags, ...plainVideos].sort((a, b) => a.start - b.start);
+
+            // Step 6: Build output by processing content in order
+            let lastIndex = 0;
+
+            for (const video of allVideos) {
+                // Add text before video
+                const textBefore = content.substring(lastIndex, video.start);
                 if (textBefore.trim()) {
                     const textEl = document.createElement('p');
                     textEl.innerHTML = textBefore.trim().replace(/\n/g, '<br>');
-                    container.appendChild(textEl);
+                    elements.push(textEl);
                 }
 
-                container.appendChild(createVideoEmbed(videoUrl));
+                // Add video embed
+                elements.push(createVideoEmbed(video.videoId, video.url));
 
-                if (textAfter.trim()) {
-                    const textEl = document.createElement('p');
-                    textEl.innerHTML = textAfter.trim().replace(/\n/g, '<br>');
-                    container.appendChild(textEl);
-                }
-
-                return container;
+                lastIndex = video.end;
             }
 
-            // Check for plain YouTube URLs and convert them to embedded players
-            const youtubeUrlPattern = /(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+))/g;
-            const youtubeMatches = [...content.matchAll(youtubeUrlPattern)];
-
-            if (youtubeMatches.length > 0) {
-                let lastIndex = 0;
-
-                youtubeMatches.forEach((match) => {
-                    const fullUrl = match[0];
-                    const matchIndex = match.index;
-
-                    // Add text before the URL
-                    const textBefore = content.substring(lastIndex, matchIndex);
-                    if (textBefore.trim()) {
-                        const textEl = document.createElement('p');
-                        textEl.innerHTML = textBefore.trim().replace(/\n/g, '<br>');
-                        container.appendChild(textEl);
-                    }
-
-                    // Add embedded video
-                    container.appendChild(createVideoEmbed(fullUrl));
-
-                    lastIndex = matchIndex + fullUrl.length;
-                });
-
-                // Add any remaining text after the last URL
-                const textAfter = content.substring(lastIndex);
-                if (textAfter.trim()) {
-                    const textEl = document.createElement('p');
-                    textEl.innerHTML = textAfter.trim().replace(/\n/g, '<br>');
-                    container.appendChild(textEl);
-                }
-
-                return container;
+            // Add remaining text after last video
+            const textAfter = content.substring(lastIndex);
+            if (textAfter.trim()) {
+                const textEl = document.createElement('p');
+                textEl.innerHTML = textAfter.trim().replace(/\n/g, '<br>');
+                elements.push(textEl);
             }
 
-            // Regular text
-            const textEl = document.createElement('p');
-            textEl.innerHTML = content.replace(/\n/g, '<br>');
-            container.appendChild(textEl);
-            return container;
+            // If no videos found, return the original content as a paragraph
+            if (elements.length === 0) {
+                const textEl = document.createElement('p');
+                textEl.innerHTML = content.replace(/\n/g, '<br>');
+                elements.push(textEl);
+            }
+
+            console.log(`[VIDEO DETECTION] Processed content: found ${allVideos.length} video(s)`);
+            return elements;
         }
 
         function createSlider(min, max) {
@@ -788,20 +839,36 @@ Remember: Brief explanations, one question at a time, and use the special format
             return optionsContainer;
         }
 
-        function createVideoEmbed(url) {
-            const videoId = extractVideoId(url);
-            // Check if video ID is invalid or is the template placeholder
-            if (!videoId || videoId === 'VIDEO_ID' || videoId.includes('full-youtube-url')) {
+        /**
+         * Creates a video embed element for a validated YouTube video
+         * @param {string} videoId - The 11-character YouTube video ID (already validated)
+         * @param {string} originalUrl - The original URL for debugging/logging purposes
+         * @returns {HTMLElement} Either an iframe container or a fallback link
+         */
+        function createVideoEmbed(videoId, originalUrl) {
+            // Strict validation: videoId must be exactly 11 characters, alphanumeric with dashes/underscores
+            const isValidId = videoId &&
+                             /^[a-zA-Z0-9_-]{11}$/.test(videoId) &&
+                             videoId !== 'VIDEO_ID' &&
+                             videoId !== 'full-youtub' &&
+                             !videoId.includes('example');
+
+            if (!isValidId) {
+                console.error(`[VIDEO EMBED] Invalid video ID: "${videoId}" from URL: "${originalUrl}"`);
                 const link = document.createElement('a');
-                link.href = url;
+                link.href = originalUrl || '#';
                 link.target = '_blank';
-                link.textContent = 'Watch video (link may be invalid)';
+                link.textContent = '⚠️ Invalid video link';
                 link.style.color = '#dc2626';
+                link.style.textDecoration = 'underline';
                 return link;
             }
 
+            console.log(`[VIDEO EMBED] Creating embed for video ID: ${videoId}`);
+
             const container = document.createElement('div');
             container.className = 'video-container';
+            container.setAttribute('data-video-id', videoId);
 
             const wrapper = document.createElement('div');
             wrapper.className = 'video-wrapper';
@@ -811,27 +878,12 @@ Remember: Brief explanations, one question at a time, and use the special format
             iframe.title = 'YouTube video player';
             iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
             iframe.allowFullscreen = true;
+            iframe.setAttribute('loading', 'lazy'); // Improve performance
 
             wrapper.appendChild(iframe);
             container.appendChild(wrapper);
 
             return container;
-        }
-
-        function extractVideoId(url) {
-            // Handle youtube.com/watch?v=VIDEO_ID
-            let match = url.match(/[?&]v=([^&]+)/);
-            if (match) return match[1];
-
-            // Handle youtu.be/VIDEO_ID
-            match = url.match(/youtu\.be\/([^?&]+)/);
-            if (match) return match[1];
-
-            // Handle youtube.com/embed/VIDEO_ID
-            match = url.match(/youtube\.com\/embed\/([^?&]+)/);
-            if (match) return match[1];
-
-            return null;
         }
 
         function submitAnswer(answer) {
