@@ -515,8 +515,10 @@ IMPORTANT RULES:
    [OPTION: Second answer]
    [OPTION: Third answer]
    [OPTION: Fourth answer]
-5. When the learner answers incorrectly, provide brief feedback and include a YouTube video link:
-   [VIDEO: https://www.youtube.com/watch?v=VIDEO_ID]
+5. When the learner answers incorrectly, provide brief feedback and include a YouTube video link in this format:
+   [VIDEO: full-youtube-url-here]
+   IMPORTANT: Replace "full-youtube-url-here" with an actual, specific YouTube URL
+   Example: [VIDEO: https://www.youtube.com/watch?v=dQw4w9WgXcQ]
    Choose short educational videos (under 10 minutes) from reputable channels like Khan Academy, Crash Course, TED-Ed
 6. When the learner answers correctly, give brief positive reinforcement and continue
 7. Adapt to the learner's level of understanding
@@ -780,11 +782,13 @@ Remember: Brief explanations, one question at a time, and use the special format
 
         function createVideoCard(url) {
             const videoId = extractVideoId(url);
-            if (!videoId) {
+            // Check if video ID is invalid or is the template placeholder
+            if (!videoId || videoId === 'VIDEO_ID' || videoId.includes('full-youtube-url')) {
                 const link = document.createElement('a');
                 link.href = url;
                 link.target = '_blank';
-                link.textContent = 'Watch video';
+                link.textContent = 'Watch video (link may be invalid)';
+                link.style.color = '#dc2626';
                 return link;
             }
 
