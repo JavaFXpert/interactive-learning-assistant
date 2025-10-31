@@ -580,8 +580,7 @@ Remember: Brief explanations, one question at a time, and use the special format
                 const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'anthropic-version': '2023-06-01'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         model: MODEL,
