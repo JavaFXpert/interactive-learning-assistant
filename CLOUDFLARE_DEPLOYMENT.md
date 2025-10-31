@@ -53,11 +53,17 @@ Copy this URL - you'll need it in the next step.
 ### Step 6: Update Your Frontend
 
 1. Open `index.html` in a text editor
-2. Find line 502 (around there) with `const API_ENDPOINT = 'YOUR_CLOUDFLARE_WORKER_URL_HERE';`
+2. Find line 503 (around there) with `const API_ENDPOINT = 'YOUR_CLOUDFLARE_WORKER_URL_HERE';`
 3. Replace it with your worker URL:
    ```javascript
    const API_ENDPOINT = 'https://anthropic-proxy.<your-subdomain>.workers.dev';
    ```
+
+   ⚠️ **IMPORTANT**:
+   - MUST include the `https://` prefix
+   - Use your actual subdomain from Cloudflare
+   - Example: `https://interactive-learning-assistant.james-e27.workers.dev`
+
 4. Save the file
 
 ### Step 7: Test It!
@@ -119,6 +125,8 @@ Update the `API_ENDPOINT` in `index.html` to point to your worker URL:
 ```javascript
 const API_ENDPOINT = 'https://interactive-learning-assistant-proxy.<your-subdomain>.workers.dev';
 ```
+
+⚠️ **IMPORTANT**: MUST include the `https://` prefix!
 
 ## Testing
 

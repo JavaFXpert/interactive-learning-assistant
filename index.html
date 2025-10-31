@@ -498,10 +498,19 @@
     <script>
         // IMPORTANT: Replace this with your Cloudflare Worker URL after deployment
         // See CLOUDFLARE_DEPLOYMENT.md for instructions
-        // Example: 'https://interactive-learning-assistant-proxy.YOUR-SUBDOMAIN.workers.dev'
+        // MUST include https:// prefix!
+        // Example: 'https://anthropic-proxy.YOUR-NAME.workers.dev'
         const API_ENDPOINT = 'YOUR_CLOUDFLARE_WORKER_URL_HERE';
         const MODEL = 'claude-haiku-4-5-20250514';
         const MAX_TOKENS = 2000;
+
+        // Validate API endpoint configuration
+        if (API_ENDPOINT === 'YOUR_CLOUDFLARE_WORKER_URL_HERE') {
+            console.error('⚠️ API_ENDPOINT not configured! Please update index.html with your Cloudflare Worker URL.');
+        } else if (!API_ENDPOINT.startsWith('https://')) {
+            console.error('⚠️ API_ENDPOINT must start with https:// - Current value:', API_ENDPOINT);
+            console.error('Example: https://anthropic-proxy.your-name.workers.dev');
+        }
 
         const SYSTEM_PROMPT = `You are an interactive teaching assistant. Your role is to teach any subject through a balanced approach of brief explanations and guided questions.
 
