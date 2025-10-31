@@ -1,7 +1,7 @@
 # Cloudflare Workers configuration file
 # This file configures your worker deployment
 
-name = "interactive-learning-assistant-proxy"
+name = "interactive-learning-assistant"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
