@@ -1,0 +1,10 @@
+# Cloudflare Workers configuration file
+# This file configures your worker deployment
+
+name = "interactive-learning-assistant-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Environment variables (configure via Cloudflare dashboard)
+# [vars]
+# ANTHROPIC_API_KEY will be set via: wrangler secret put ANTHROPIC_API_KEY
