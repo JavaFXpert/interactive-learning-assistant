@@ -6,6 +6,7 @@ This guide explains how to deploy the Anthropic API proxy to Cloudflare Workers.
 
 1. A Cloudflare account (free tier works fine) - [Sign up here](https://dash.cloudflare.com/sign-up)
 2. Your Anthropic API key - [Get one here](https://console.anthropic.com/)
+3. A YouTube Data API v3 key (for video search) - [Get one here](https://console.cloud.google.com/)
 
 ## Method 1: Deploy via Cloudflare Dashboard (Easiest)
 
@@ -29,17 +30,21 @@ This guide explains how to deploy the Anthropic API proxy to Cloudflare Workers.
 3. Copy and paste the **entire contents** of `worker.js` from this repository
 4. Click **Save and Deploy**
 
-### Step 4: Add Your API Key
+### Step 4: Add Your API Keys
 
 1. Go back to the worker overview (click the worker name in breadcrumbs)
 2. Click **Settings** tab
 3. Click **Variables** in the left menu
 4. Under "Environment Variables", click **Add variable**
-5. Set:
+5. Add the **first API key**:
    - **Variable name**: `ANTHROPIC_API_KEY`
    - **Value**: Your Anthropic API key
    - **Type**: Check "Encrypt" to make it a secret
-6. Click **Deploy**
+6. Click **Add variable** again for the **second API key**:
+   - **Variable name**: `YOUTUBE_API_KEY`
+   - **Value**: Your YouTube Data API v3 key
+   - **Type**: Check "Encrypt" to make it a secret
+7. Click **Deploy**
 
 ### Step 5: Get Your Worker URL
 
@@ -100,15 +105,19 @@ From this directory, run:
 wrangler deploy
 ```
 
-### Step 4: Set Your API Key
+### Step 4: Set Your API Keys
 
-After deployment, add your Anthropic API key as a secret:
+After deployment, add your API keys as secrets:
 
 ```bash
+# Add Anthropic API key
 wrangler secret put ANTHROPIC_API_KEY
+
+# Add YouTube Data API key (for video search)
+wrangler secret put YOUTUBE_API_KEY
 ```
 
-When prompted, paste your Anthropic API key.
+When prompted, paste the corresponding API keys.
 
 ### Step 5: Get Your Worker URL
 
@@ -172,5 +181,7 @@ If you prefer using the Cloudflare dashboard:
 2. Navigate to Workers & Pages
 3. Select your worker
 4. Go to Settings > Variables
-5. Add an environment variable: `ANTHROPIC_API_KEY` (type: Secret)
-6. Paste your API key
+5. Add environment variables (type: Secret for both):
+   - `ANTHROPIC_API_KEY` - Your Anthropic API key
+   - `YOUTUBE_API_KEY` - Your YouTube Data API v3 key
+6. Paste each API key when prompted

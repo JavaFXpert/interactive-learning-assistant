@@ -478,23 +478,26 @@ IMPORTANT RULES:
    [OPTION: Second answer]
    [OPTION: Third answer]
    [OPTION: Fourth answer]
-5. When the learner answers incorrectly, provide brief feedback and include a YouTube video link in this EXACT format:
-   [VIDEO: https://www.youtube.com/watch?v=VIDEO_ID_HERE]
+5. When the learner answers incorrectly, provide brief feedback and include an educational video using this EXACT format:
+   [SEARCH_VIDEO: descriptive search query for the topic]
 
    CRITICAL REQUIREMENTS:
-   - You MUST use a complete, valid YouTube URL starting with https://www.youtube.com/watch?v= or https://youtu.be/
-   - The video ID must be exactly 11 characters
-   - NEVER use placeholder text like "full-youtube-url-here" or "VIDEO_ID"
-   - ONLY suggest videos you know exist
+   - Use [SEARCH_VIDEO: ...] to automatically find relevant educational videos
+   - The system will search YouTube and embed the most relevant, highly-rated, short educational video
+   - Make your search query specific and educational (e.g., "treble clef music theory basics", "photosynthesis explained", "quadratic equations tutorial")
+   - Focus on the core concept the learner needs to understand
+   - The system filters for short/medium duration (under 20 min), high relevance, and safe content
 
-   Example: [VIDEO: https://www.youtube.com/watch?v=dQw4w9WgXcQ]
+   Example: [SEARCH_VIDEO: treble clef note reading basics]
+   Example: [SEARCH_VIDEO: photosynthesis process explained]
+   Example: [SEARCH_VIDEO: solving quadratic equations tutorial]
 
-   Choose short educational videos (under 10 minutes) from reputable channels like Khan Academy, Crash Course, TED-Ed
+   NOTE: You can still use direct YouTube URLs if you prefer: [VIDEO: https://www.youtube.com/watch?v=VIDEO_ID]
 6. When the learner answers correctly, give brief positive reinforcement and continue
 7. Adapt to the learner's level of understanding
 8. Be encouraging, patient, and supportive
 
-Remember: Brief explanations, one question at a time, and use the special formatting for numeric ranges, options, and videos.`;
+Remember: Brief explanations, one question at a time, and use the special formatting for numeric ranges, options, and video searches.`;
 
         let conversation = [];
         let isWaitingForResponse = false;
@@ -539,7 +542,7 @@ Remember: Brief explanations, one question at a time, and use the special format
 
             // Add user message to conversation and UI
             conversation.push({ role: 'user', content: message });
-            addMessage('user', message);
+            await addMessage('user', message);
             userInput.value = '';
             userInput.disabled = true;
             sendButton.disabled = true;
@@ -573,12 +576,12 @@ Remember: Brief explanations, one question at a time, and use the special format
                 // Add assistant message to conversation and UI
                 conversation.push({ role: 'assistant', content: assistantMessage });
                 loadingEl.remove();
-                addMessage('assistant', assistantMessage);
+                await addMessage('assistant', assistantMessage);
 
             } catch (error) {
                 console.error('Error:', error);
                 loadingEl.remove();
-                addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+                await addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
             } finally {
                 userInput.disabled = false;
                 sendButton.disabled = false;
@@ -587,15 +590,15 @@ Remember: Brief explanations, one question at a time, and use the special format
             }
         }
 
-        function addMessage(role, content) {
+        async function addMessage(role, content) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role}`;
 
             const bubbleDiv = document.createElement('div');
             bubbleDiv.className = 'message-bubble';
 
-            // Parse and render the content
-            const renderedContent = parseContent(content, role);
+            // Parse and render the content (async for video searches)
+            const renderedContent = await parseContent(content, role);
             bubbleDiv.appendChild(renderedContent);
 
             messageDiv.appendChild(bubbleDiv);
@@ -622,7 +625,7 @@ Remember: Brief explanations, one question at a time, and use the special format
             return messageDiv;
         }
 
-        function parseContent(content, role) {
+        async function parseContent(content, role) {
             const container = document.createElement('div');
 
             // Check for numeric slider pattern: [NUMERIC: min-max]
@@ -659,9 +662,9 @@ Remember: Brief explanations, one question at a time, and use the special format
                 return container;
             }
 
-            // NEW: Deterministic video detection system
-            // Process content and extract all video references
-            const processedContent = parseAndRenderVideos(content);
+            // NEW: Deterministic video detection system with search support
+            // Process content and extract all video references (async for searches)
+            const processedContent = await parseAndRenderVideos(content);
 
             // Add the processed content to container
             processedContent.forEach(element => container.appendChild(element));
@@ -671,21 +674,57 @@ Remember: Brief explanations, one question at a time, and use the special format
 
         /**
          * Deterministic video detection and rendering
-         * Processes content in order, handling both [VIDEO: url] tags and plain YouTube URLs
+         * Processes content in order, handling [VIDEO: url], [SEARCH_VIDEO: query], and plain YouTube URLs
          */
-        function parseAndRenderVideos(content) {
+        async function parseAndRenderVideos(content) {
             const elements = [];
 
-            // Step 1: Define strict YouTube URL pattern
-            // Matches: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID
+            // Step 1: Define patterns
             const YOUTUBE_URL_REGEX = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&][^\s\]]*)?/;
-
-            // Step 2: Define [VIDEO: url] tag pattern - must contain a valid YouTube URL
             const VIDEO_TAG_REGEX = /\[VIDEO:\s*([^\]]+?)\]/g;
+            const SEARCH_VIDEO_TAG_REGEX = /\[SEARCH_VIDEO:\s*([^\]]+?)\]/g;
 
-            // Step 3: Find all [VIDEO: ...] tags first (these have priority)
-            const videoTags = [];
+            // Step 2: Find all [SEARCH_VIDEO: ...] tags and fetch videos
+            const searchVideoTags = [];
             let match;
+            while ((match = SEARCH_VIDEO_TAG_REGEX.exec(content)) !== null) {
+                const tagStart = match.index;
+                const tagEnd = match.index + match[0].length;
+                const query = match[1].trim();
+
+                console.log(`[VIDEO SEARCH] Found search query: "${query}"`);
+                searchVideoTags.push({
+                    start: tagStart,
+                    end: tagEnd,
+                    query: query,
+                    fullMatch: match[0]
+                });
+            }
+
+            // Fetch all search videos in parallel
+            const searchPromises = searchVideoTags.map(async (tag) => {
+                try {
+                    const result = await searchVideo(tag.query);
+                    return {
+                        ...tag,
+                        videoId: result.videoId,
+                        url: result.url,
+                        title: result.title
+                    };
+                } catch (error) {
+                    console.error(`[VIDEO SEARCH] Failed to search for "${tag.query}":`, error);
+                    return {
+                        ...tag,
+                        videoId: null,
+                        error: error.message
+                    };
+                }
+            });
+
+            const searchResults = await Promise.all(searchPromises);
+
+            // Step 3: Find all [VIDEO: ...] tags with direct URLs
+            const videoTags = [];
             while ((match = VIDEO_TAG_REGEX.exec(content)) !== null) {
                 const tagStart = match.index;
                 const tagEnd = match.index + match[0].length;
@@ -708,7 +747,7 @@ Remember: Brief explanations, one question at a time, and use the special format
                 }
             }
 
-            // Step 4: Find all plain YouTube URLs (not in [VIDEO: ...] tags)
+            // Step 4: Find all plain YouTube URLs (not in any tags)
             const plainVideos = [];
             const PLAIN_YOUTUBE_REGEX = new RegExp(YOUTUBE_URL_REGEX.source, 'g');
 
@@ -717,8 +756,10 @@ Remember: Brief explanations, one question at a time, and use the special format
                 const urlEnd = match.index + match[0].length;
                 const videoId = match[1];
 
-                // Check if this URL is inside a [VIDEO: ...] tag
-                const insideTag = videoTags.some(tag => urlStart >= tag.start && urlEnd <= tag.end);
+                // Check if this URL is inside any tag
+                const insideTag = [...videoTags, ...searchVideoTags].some(
+                    tag => urlStart >= tag.start && urlEnd <= tag.end
+                );
 
                 if (!insideTag) {
                     plainVideos.push({
@@ -731,8 +772,10 @@ Remember: Brief explanations, one question at a time, and use the special format
                 }
             }
 
-            // Step 5: Combine and sort all video locations
-            const allVideos = [...videoTags, ...plainVideos].sort((a, b) => a.start - b.start);
+            // Step 5: Combine all videos and sort by position
+            const allVideos = [...searchResults, ...videoTags, ...plainVideos]
+                .filter(v => v.videoId) // Only include successfully found videos
+                .sort((a, b) => a.start - b.start);
 
             // Step 6: Build output by processing content in order
             let lastIndex = 0;
@@ -769,6 +812,38 @@ Remember: Brief explanations, one question at a time, and use the special format
 
             console.log(`[VIDEO DETECTION] Processed content: found ${allVideos.length} video(s)`);
             return elements;
+        }
+
+        /**
+         * Search for a YouTube video using the backend API
+         * @param {string} query - The search query
+         * @returns {Promise<Object>} Video information including videoId, title, url
+         */
+        async function searchVideo(query) {
+            console.log(`[VIDEO SEARCH] Searching for: "${query}"`);
+
+            const response = await fetch(`${API_ENDPOINT}/search-video`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query: query })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || `Search failed with status ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log(`[VIDEO SEARCH] Found video: ${data.title} (${data.videoId})`);
+
+            return {
+                videoId: data.videoId,
+                title: data.title,
+                channelTitle: data.channelTitle,
+                url: data.url
+            };
         }
 
         function createSlider(min, max) {

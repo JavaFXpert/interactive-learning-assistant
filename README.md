@@ -7,7 +7,7 @@ An interactive teaching companion powered by Claude 3.5 Haiku that guides learne
 - 🎓 Interactive teaching with questions and explanations
 - 📊 Numeric slider for number-based answers
 - ✅ Multiple-choice questions with four options
-- 🎥 YouTube video recommendations for incorrect answers
+- 🎥 **Automatic YouTube video search** - finds short, relevant, highly-rated educational videos for incorrect answers
 - 💬 Natural conversation flow
 
 ## Setup
@@ -21,14 +21,24 @@ This application requires a backend proxy to work because browsers cannot make d
 1. **Deploy the Cloudflare Worker proxy** (required to fix CORS errors)
    - Follow the instructions in [CLOUDFLARE_DEPLOYMENT.md](./CLOUDFLARE_DEPLOYMENT.md)
    - This will create a secure proxy that handles API requests
-   - Your API key stays secure in the worker's environment variables
+   - Your API keys stay secure in the worker's environment variables
+   - **Required environment variables:**
+     - `ANTHROPIC_API_KEY`: Your Anthropic API key
+     - `YOUTUBE_API_KEY`: Your YouTube Data API v3 key (for video search feature)
 
-2. **Update the frontend**
+2. **Get a YouTube Data API key** (for automatic video search)
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+   - Enable the "YouTube Data API v3"
+   - Create credentials (API key)
+   - Add the API key to your Cloudflare Worker environment variables as `YOUTUBE_API_KEY`
+
+3. **Update the frontend**
    - Open `index.html`
    - Replace `YOUR_CLOUDFLARE_WORKER_URL_HERE` with your deployed worker URL
    - Example: `https://interactive-learning-assistant-proxy.your-subdomain.workers.dev`
 
-3. **Open the application**
+4. **Open the application**
    - Open `index.html` in your browser, or
    - Deploy to GitHub Pages, Netlify, or any static hosting
 
