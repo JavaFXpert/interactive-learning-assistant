@@ -420,7 +420,7 @@
         <header>
             <div class="header-text">
                 <h1>Interactive Learning Assistant</h1>
-                <p>Powered by Claude Haiku 4.5 - Your personal teaching companion</p>
+                <p>Powered by Claude 3.5 Haiku - Your personal teaching companion</p>
             </div>
             <button class="clear-button" id="clearButton">Clear & Start New</button>
         </header>
@@ -456,6 +456,14 @@
         const API_ENDPOINT = 'https://interactive-learning-assistant.james-e27.workers.dev';
         const MODEL = 'claude-haiku-4-5';
         const MAX_TOKENS = 2000;
+
+        // Validate API endpoint configuration
+        if (API_ENDPOINT === 'YOUR_CLOUDFLARE_WORKER_URL_HERE') {
+            console.error('⚠️ API_ENDPOINT not configured! Please update index.html with your Cloudflare Worker URL.');
+        } else if (!API_ENDPOINT.startsWith('https://')) {
+            console.error('⚠️ API_ENDPOINT must start with https:// - Current value:', API_ENDPOINT);
+            console.error('Example: https://anthropic-proxy.your-name.workers.dev');
+        }
 
         const SYSTEM_PROMPT = `You are an interactive teaching assistant. Your role is to teach any subject through a balanced approach of brief explanations and guided questions.
 
@@ -532,7 +540,8 @@ Remember: Brief explanations, one question at a time, and use the special format
             const loadingEl = addLoadingIndicator();
 
             try {
-                // Make API call
+                // Make API call to the Cloudflare Worker proxy
+                // Note: The worker adds the anthropic-version header and API key
                 const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     headers: {
